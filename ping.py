@@ -15,8 +15,11 @@
     :license: GNU GPL v2, see LICENSE for more details.
 """
 
-
-import os, sys, socket, struct, select, time, signal
+from os import getpid
+from select import select
+from string import split
+from struct import pack, unpack
+import sys, socket, time, signal
 
 
 if sys.platform.startswith("win32"):
@@ -75,11 +78,19 @@ def calculate_checksum(source_string):
 
     return answer
 
+def is_valid_ip4_address(x):
+    l = split(x,'.')
+    return len(l)==4 and all(str.isdigit(i) for i in l) and all(map(lambda x: int(x)<256, l))
+
+def dest_address(dst):
+    if is_valid_ip4_address(dst):
+        return dst
+    return socket.gethostbyname(dst)
 
 class HeaderInformation(dict):
     """ Simple storage received IP and ICMP header informations """
     def __init__(self, names, struct_format, data):
-        unpacked_data = struct.unpack(struct_format, data)
+        unpacked_data = unpack(struct_format, data)
         dict.__init__(self, dict(zip(names, unpacked_data)))
 
 
@@ -89,13 +100,12 @@ class Ping(object):
         self.timeout = timeout
         self.packet_size = packet_size
         if own_id is None:
-            self.own_id = os.getpid() & 0xFFFF
+            self.own_id = getpid() & 0xFFFF
         else:
             self.own_id = own_id
 
         try:
-            # FIXME: Use destination only for display this line here? see: https://github.com/jedie/python-ping/issues/3
-            self.dest_ip = socket.gethostbyname(self.destination)
+            self.dest_ip = dest_address(self.destination)
         except socket.gaierror as e:
             self.print_unknown_host(e)
             sys.exit(-1)
@@ -238,9 +248,7 @@ class Ping(object):
         checksum = 0
 
         # Make a dummy header with a 0 checksum.
-        header = struct.pack(
-            "!BBHHH", ICMP_ECHO, 0, checksum, self.own_id, self.seq_number
-        )
+        header = pack("!BBHHH", ICMP_ECHO, 0, checksum, self.own_id, self.seq_number)
 
         padBytes = []
         startVal = 0x42
@@ -253,9 +261,7 @@ class Ping(object):
 
         # Now that we have the right checksum, we put that in. It's just easier
         # to make up a new header than to stuff it into the dummy.
-        header = struct.pack(
-            "!BBHHH", ICMP_ECHO, 0, checksum, self.own_id, self.seq_number
-        )
+        header = pack("!BBHHH", ICMP_ECHO, 0, checksum, self.own_id, self.seq_number)
 
         packet = header + data
 
@@ -278,7 +284,7 @@ class Ping(object):
 
         while True: # Loop while waiting for packet or timeout
             select_start = default_timer()
-            inputready, outputready, exceptready = select.select([current_socket], [], [], timeout)
+            inputready, outputready, exceptready = select([current_socket], [], [], timeout)
             select_duration = (default_timer() - select_start)
             if inputready == []: # timeout
                 return None, 0, 0, 0, 0
@@ -307,7 +313,7 @@ class Ping(object):
                     data=packet_data[:20]
                 )
                 packet_size = len(packet_data) - 28
-                ip = socket.inet_ntoa(struct.pack("!I", ip_header["src_ip"]))
+                ip = socket.inet_ntoa(pack("!I", ip_header["src_ip"]))
                 # XXX: Why not ip = address[0] ???
                 return receive_time, packet_size, ip, ip_header, icmp_header
 
