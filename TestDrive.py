@@ -2,8 +2,18 @@
 # coding: utf-8
 
 from socket import gaierror
-from ping import dest_address, is_valid_ip4_address, Pinger
+from ping import dest_address, is_valid_ip4_address, print_exit, Pinger
 from unittest import TestCase, main
+
+def merge(rr1 ,rr2):
+    rr = rr1
+    rr['pkt_count']+=rr2['pkt_count']
+    rr['pkt_received']+=rr2['pkt_received']
+    rr['pkt_lost']+=rr2['pkt_lost']
+    rr['min_rt'] = min(rr1['min_rt'], rr2['min_rt'])
+    rr['max_rt'] = max(rr1['max_rt'], rr2['max_rt'])
+    rr['avg_rt'] = (rr1['pkt_received']*rr1['avg_rt']+rr2['pkt_received']*rr2['avg_rt'])/(rr1['pkt_received']+rr2['pkt_received'])
+    return rr
 
 class TestDrive(TestCase):
     def testIp4AddrPositives(self):
@@ -27,15 +37,21 @@ class TestDrive(TestCase):
         self.assertTrue(dest_address('10.10.010.01'))
         self.assertTrue(dest_address('10.010.10.1'))
 
-    def testbadInstanceReuse(self):
-        """I can't figure out a straightforward way of adding an assertion test for the Pinger instance reuse
-        But in any case if you see a full second round we are on the right track ;-) """
-        p = Pinger('www.cs.helsinki.fi', timeout=30, packet_size=100) # small time out -> rates <> 100%
-        print "First run"
-        p.run(10)
-        print "Second run"
-        p.run(9)
+    def testReusableInstance(self):
+        hostname = 'www.cs.helsinki.fi'
+        count = 3
+        p = Pinger(hostname, 100, 256) #, own_id='python-ping')
+        r1 = p.run(count-1, 1000, verbose=True)
+        r2 = p.run(1, 1000, verbose=True)
+        print_exit(hostname, merge(r1,r2))
 
+    def testReusableInstanceQuietly(self):
+        hostname = 'www.cs.helsinki.fi'
+        count = 3
+        p = Pinger(hostname, 100, 256) #, own_id='python-ping')
+        r1 = p.run(count-1, 1000, verbose=False)
+        r2 = p.run(1, 1000, verbose=False)
+        print_exit(hostname, merge(r1,r2))
 
 
 if __name__ == '__main__':

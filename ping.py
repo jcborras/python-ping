@@ -89,7 +89,7 @@ def dest_address(dst):
     return socket.gethostbyname(dst)
 
 def header_info(names, struct_format, data):
-#    """ Simple storage received IP and ICMP header informations """
+    """ Simple storage received IP and ICMP header informations """
     return dict(zip(names, unpack(struct_format, data)))
 
 def print_exit(dst, r): # r are run results
@@ -119,7 +119,7 @@ class Pinger(object):
         else:
             self.print_start()
 
-    def init_operational_state(self):
+    def reset_vars(self):
         self.seq_number = 0
         self.sent_pkts_count = 0
         self.receive_count = 0
@@ -153,7 +153,6 @@ class Pinger(object):
         'pkt_received' : self.receive_count, 'pkt_lost' : self.sent_pkts_count - self.receive_count,
         'min_rt' : self.min_time, 'avg_rt' : self.total_time / self.receive_count, 'max_rt' : self.max_time}
 
-
     def signal_handler(self, signum, frame):
         """
         Handle print_exit via signals
@@ -175,7 +174,7 @@ class Pinger(object):
         send and receive pings in a loop. Stop if count or until deadline.
         """
         self.setup_signal_handler()
-        self.init_operational_state()
+        self.reset_vars()
 
         while True:
             delay = self.do()
