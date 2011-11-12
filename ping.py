@@ -19,15 +19,16 @@ from os import getpid
 from select import select
 from string import split
 from struct import pack, unpack
-import sys, socket, time, signal
+from time import clock, sleep, time
+import sys, socket, signal
 
 
 if sys.platform.startswith("win32"):
     # On Windows, the best timer is time.clock()
-    default_timer = time.clock
+    default_timer = clock
 else:
     # On most other platforms the best timer is time.time()
-    default_timer = time.time
+    default_timer = time
 
 
 # ICMP parameters
@@ -198,7 +199,7 @@ class Ping(object):
 
             # Pause for the remainder of the MAX_SLEEP period (if applicable)
             if (MAX_SLEEP > delay):
-                time.sleep((MAX_SLEEP - delay) / 1000.0)
+                sleep((MAX_SLEEP - delay) / 1000.0)
 
         self.print_exit()
 
@@ -325,7 +326,6 @@ class Ping(object):
 def verbose_ping(hostname, timeout=1000, count=3, packet_size=55):
     p = Ping(hostname, timeout, packet_size)
     p.run(count)
-
 
 if __name__ == '__main__':
     # FIXME: Add a real CLI
