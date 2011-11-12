@@ -95,8 +95,21 @@ class HeaderInformation(dict):
         dict.__init__(self, dict(zip(names, unpacked_data)))
 
 
-class Ping(object):
-    def __init__(self, destination, timeout=1000, packet_size=55, own_id=None):
+def header_info(names, struct_format, data):
+    unpacked_data = unpack(struct_format, data)
+    return dict(zip(names, unpacked_data))
+
+def print_exit(dst, r): # r are run results
+    print("\n----%s PYTHON PING Statistics----" % (dst))
+    print("%d packets transmitted, %d packets received, %0.1f%% packet loss" %
+    (r['pkt_count'], r['pkt_received'], 100.0 * float(r['pkt_lost']) / r['pkt_count']) )
+    if r['pkt_received'] > 0:
+        print("round-trip (ms)  min/avg/max = %0.3f/%0.3f/%0.3f" % (r['min_rt'], r['avg_rt'], r['max_rt']))
+    print("")
+
+
+class Pinger(object):
+    def __init__(self, destination='', timeout=1000, packet_size=55, own_id=None):
         self.destination = destination
         self.timeout = timeout
         self.packet_size = packet_size
@@ -113,14 +126,13 @@ class Ping(object):
         else:
             self.print_start()
 
+    def init_operational_state(self):
         self.seq_number = 0
-        self.send_count = 0
+        self.sent_pkts_count = 0
         self.receive_count = 0
         self.min_time = 999999999
         self.max_time = 0.0
         self.total_time = 0.0
-
-    #--------------------------------------------------------------------------
 
     def print_start(self):
         print("\nPYTHON-PING %s (%s): %d data bytes" % (self.destination, self.dest_ip, self.packet_size))
@@ -143,31 +155,17 @@ class Ping(object):
     def print_failed(self):
         print("Request timed out.")
 
-    def print_exit(self):
-        print("\n----%s PYTHON PING Statistics----" % (self.destination))
+    def results_from_runs(self):  # _rt below stands for round-trip
+        return {'pkt_count' : self.sent_pkts_count,
+        'pkt_received' : self.receive_count, 'pkt_lost' : self.sent_pkts_count - self.receive_count,
+        'min_rt' : self.min_time, 'avg_rt' : self.total_time / self.receive_count, 'max_rt' : self.max_time}
 
-        lost_count = self.send_count - self.receive_count
-        #print("%i packets lost" % lost_count)
-        lost_rate = float(lost_count) / self.send_count * 100.0
-
-        print("%d packets transmitted, %d packets received, %0.1f%% packet loss" % (
-            self.send_count, self.receive_count, lost_rate
-        ))
-
-        if self.receive_count > 0:
-            print("round-trip (ms)  min/avg/max = %0.3f/%0.3f/%0.3f" % (
-                self.min_time, self.total_time / self.receive_count, self.max_time
-            ))
-
-        print("")
-
-    #--------------------------------------------------------------------------
 
     def signal_handler(self, signum, frame):
         """
         Handle print_exit via signals
         """
-        self.print_exit()
+        print_exit(self.destination, self.results_from_runs())
         print("\n(Terminated with signal %d)\n" % (signum))
         sys.exit(0)
 
@@ -179,11 +177,12 @@ class Ping(object):
 
     #--------------------------------------------------------------------------
 
-    def run(self, count=None, deadline=None):
+    def run(self, count=None, deadline=None, verbose=True):
         """
         send and receive pings in a loop. Stop if count or until deadline.
         """
         self.setup_signal_handler()
+        self.init_operational_state()
 
         while True:
             delay = self.do()
@@ -201,7 +200,9 @@ class Ping(object):
             if (MAX_SLEEP > delay):
                 sleep((MAX_SLEEP - delay) / 1000.0)
 
-        self.print_exit()
+        r = self.results_from_runs()
+        if verbose: print_exit(self.destination, r)
+        return r
 
     def do(self):
         """
@@ -222,7 +223,7 @@ class Ping(object):
         send_time = self.send_one_ping(current_socket)
         if send_time == None:
             return
-        self.send_count += 1
+        self.sent_pkts_count += 1
 
         receive_time, packet_size, ip, ip_header, icmp_header = self.receive_one_ping(current_socket)
         current_socket.close()
@@ -324,7 +325,7 @@ class Ping(object):
 
 
 def verbose_ping(hostname, timeout=1000, count=3, packet_size=55):
-    p = Ping(hostname, timeout, packet_size)
+    p = Pinger(hostname, timeout, packet_size)
     p.run(count)
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@
 # coding: utf-8
 
 from socket import gaierror
-from ping import dest_address, is_valid_ip4_address
+from ping import dest_address, is_valid_ip4_address, Pinger
 from unittest import TestCase, main
 
 class TestDrive(TestCase):
@@ -26,6 +26,17 @@ class TestDrive(TestCase):
         self.assertTrue(dest_address('10.10.10.1'))
         self.assertTrue(dest_address('10.10.010.01'))
         self.assertTrue(dest_address('10.010.10.1'))
+
+    def badInstanceReuse(self):
+        """I can't figure out a straightforward way of adding an assertion test for the Pinger instance reuse
+        But in any case if you see a full second round we are on the right track ;-) """
+        p = Pinger('www.cs.helsinki.fi', timeout=30, packet_size=100) # small time out -> rates <> 100%
+        print "First run"
+        p.run(10)
+        print "Second run"
+        p.run(9)
+
+
 
 if __name__ == '__main__':
     main()
