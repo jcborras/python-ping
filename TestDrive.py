@@ -27,7 +27,7 @@ class TestDrive(TestCase):
         self.assertTrue(dest_address('10.10.010.01'))
         self.assertTrue(dest_address('10.010.10.1'))
 
-    def badInstanceReuse(self):
+    def testbadInstanceReuse(self):
         """I can't figure out a straightforward way of adding an assertion test for the Pinger instance reuse
         But in any case if you see a full second round we are on the right track ;-) """
         p = Pinger('www.cs.helsinki.fi', timeout=30, packet_size=100) # small time out -> rates <> 100%

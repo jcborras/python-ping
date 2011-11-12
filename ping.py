@@ -88,16 +88,9 @@ def dest_address(dst):
         return dst
     return socket.gethostbyname(dst)
 
-class HeaderInformation(dict):
-    """ Simple storage received IP and ICMP header informations """
-    def __init__(self, names, struct_format, data):
-        unpacked_data = unpack(struct_format, data)
-        dict.__init__(self, dict(zip(names, unpacked_data)))
-
-
 def header_info(names, struct_format, data):
-    unpacked_data = unpack(struct_format, data)
-    return dict(zip(names, unpacked_data))
+#    """ Simple storage received IP and ICMP header informations """
+    return dict(zip(names, unpack(struct_format, data)))
 
 def print_exit(dst, r): # r are run results
     print("\n----%s PYTHON PING Statistics----" % (dst))
@@ -295,7 +288,7 @@ class Pinger(object):
 
             packet_data, address = current_socket.recvfrom(ICMP_MAX_RECV)
 
-            icmp_header = HeaderInformation(
+            icmp_header = header_info(
                 names=[
                     "type", "code", "checksum",
                     "packet_id", "seq_number"
@@ -305,7 +298,7 @@ class Pinger(object):
             )
 
             if icmp_header["packet_id"] == self.own_id: # Our packet
-                ip_header = HeaderInformation(
+                ip_header = header_info(
                     names=[
                         "version", "type", "length",
                         "id", "flags", "ttl", "protocol",
