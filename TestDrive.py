@@ -5,26 +5,24 @@ from socket import gaierror
 from ping import dest_address, is_valid_ip4_address
 from unittest import TestCase, main
 
-class Ip4Addr(TestCase):
-    def testPositives(self):
+class TestDrive(TestCase):
+    def testIp4AddrPositives(self):
         self.assertTrue(is_valid_ip4_address('0.0.0.0'))
         self.assertTrue(is_valid_ip4_address('1.2.3.4'))
         self.assertTrue(is_valid_ip4_address('12.34.56.78'))
         self.assertTrue(is_valid_ip4_address('255.255.255.255'))
 
-    def testNegatives(self):
+    def testIp4AddrNegatives(self):
         self.assertFalse(is_valid_ip4_address('0.0.0.0.0'))
         self.assertFalse(is_valid_ip4_address('1.2.3'))
         self.assertFalse(is_valid_ip4_address('a2.34.56.78'))
         self.assertFalse(is_valid_ip4_address('255.255.255.256'))
 
+    def testDestAddr1(self):
+        self.assertTrue(is_valid_ip4_address(dest_address('www.wikipedia.org')))
+        self.assertRaises(gaierror, dest_address, ('www.papipedia.puag'))
 
-class DestAddr(TestCase):
-    def test1(self):
-        self.assertTrue(is_valid_ip4_address(dest_address('www.github.com')))
-        self.assertRaises(gaierror, dest_address, ('asafsfas.asfasdf.asdf'))
-
-    def test2(self):
+    def testDestAddr2(self):
         self.assertTrue(dest_address('10.10.10.1'))
         self.assertTrue(dest_address('10.10.010.01'))
         self.assertTrue(dest_address('10.010.10.1'))
